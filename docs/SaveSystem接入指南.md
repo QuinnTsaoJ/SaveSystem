@@ -332,7 +332,7 @@ USaveSystemBPLibrary::DeleteSlot(TEXT("MySlot1"), Err);
 
 运行时 Spawn 的带 `SaveableComponent` 的 Actor **会被自动保存与恢复**——插件记录其 Class、Transform、状态，加载时自动 Spawn 重建并恢复状态。你无需做任何额外工作。
 
-> **关键区别**：地图里摆好的 Actor 只存状态（它本来就在世界里）；运行时 Spawn 的 Actor 连"重新生成"都由插件负责。判断依据是组件的 `bRuntimeSpawned` 标记——加载流程 Spawn 出的 Actor 会自动置为 true。
+> **关键区别**：地图里摆好的 Actor 只存状态（它本来就在世界里）；运行时 Spawn 的 Actor 连"重新生成"都由插件负责。插件在组件注册时自动检测：若世界已开始游戏（HasBegunPlay() == true），判定为运行时 Actor，存档时归入 RuntimeActorRecords（含 Class + Transform），读档时自动 Spawn 重建。无需游戏侧手动标记。
 
 ---
 

@@ -21,13 +21,25 @@ void USaveableComponent::OnRegister()
 {
 	Super::OnRegister();
 
-	// 地图 Actor:OnRegister 时由路径派生 GUID 并缓存(免持久化、免冲突,方案 A 核心)
-	// 运行时 Actor(bRuntimeSpawned==true)的 GUID 在 EnsureRuntimeGUID 时按需生成
+	// 自动检测:运行时 Spawn 的 Actor 在世界已开始游戏后才注册
+	// 地图原生 Actor 在关卡加载阶段注册,此时 HasBegunPlay() == false
+	// 此判定无需游戏侧手动标记,符合"零侵入"承诺
+	if (!bRuntimeSpawned && GetOwner())
+	{
+		UWorld* World = GetWorld();
+		if (World && World->HasBegunPlay())
+		{
+			// 世界已 BeginPlay,说明本组件是运行时 Spawn 的 Actor 挂载的
+			bRuntimeSpawned = true;
+		}
+	}
+
+	// GUID 派生:
+	// - 地图 Actor(bRuntimeSpawned==false):由路径派生并缓存(免持久化、免冲突)
+	// - 运行时 Actor(bRuntimeSpawned==true):延迟到 GetSaveGUID 时用 NewGuid 生成(随存档持久化)
 	if (!bRuntimeSpawned && GetOwner())
 	{
 		const FString PathName = GetOwner()->GetPathName();
-		// 方案 A:用路径字符串稳定派生 GUID(同一路径永远算出同一 GUID)
-		// 对路径分段哈希填充 FGuid 的 4 个 uint32,避免引入 SHA1 API 的细节复杂度
 		const uint32 H0 = GetTypeHash(PathName);
 		const uint32 H1 = GetTypeHash(PathName + TEXT("|1"));
 		const uint32 H2 = GetTypeHash(PathName + TEXT("|2"));
