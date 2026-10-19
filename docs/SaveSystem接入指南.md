@@ -328,6 +328,16 @@ USaveSystemBPLibrary::GetSlotList(Slots);  // 供存档列表 UI
 USaveSystemBPLibrary::DeleteSlot(TEXT("MySlot1"), Err);
 ```
 
+### 本项目的 UI-008 读档入口
+
+依据 2026-10-17 的[主项目接入通知](工单/UI-008_主项目接入通知.md)，本项目的游戏读档入口使用 `AInventoryUIPlayerController::RequestProjectLoad`，L 键保留原输入门控和槽名 `test_save_slot`。`ApplySaveData` 接入项目 `ApplyLoadedInventory`，由其记录库存恢复结果。插件通用 `LoadGame`／`QuickLoad` 接口保持可用，项目新增读档触发点应接入项目桥接，以执行 UI 生命周期流程。
+
+项目桥接先设置库存恢复门控，调用 `CloseAllViews(WorldChanged)`，登记无 Widget 的 System 阻塞会话；若处于 Queued，则等待提交并确认激活后再单次调用同步 `LoadGame`。加载只由返回路径单次结算，不同时订阅 `OnLoadComplete` 进行同一流程的清理或刷新。
+
+文件加载与库存业务恢复分别判断，`LoadGame` 的成功返回值不能代替库存恢复成功。成功后重新解析当前对象、恢复有效 HUD 并释放 System；失败也释放 System、显示错误，不恢复旧背包或对话会话。SaveSystem 不保存 UI 运行态，UI 桥接由项目负责。
+
+主项目回执和现有证据记录完整 DebugGame 构建与 64 项相关回归通过；人工 PIE、画面与输入、切图仍待验，UI-008／UI-010 保持开放。本次接入没有增加跨图加载能力。
+
 ### 运行时 Actor（Spawn 出来的对象）
 
 运行时 Spawn 的带 `SaveableComponent` 的 Actor **会被自动保存与恢复**——插件记录其 Class、Transform、状态，加载时自动 Spawn 重建并恢复状态。你无需做任何额外工作。
